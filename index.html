@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1117">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<title>P&L Tracker</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:-apple-system,'SF Pro Display','Segoe UI',system-ui,sans-serif;}
+#app{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+input::placeholder{opacity:0.5;}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const TH={
+midnight:{name:"Midnight",bg:"#0f1117",card:"#1a1d27",cell:"#1e2130",cellActive:"#252940",border:"#2a2e3d",text:"#ffffff",dim:"#8890a8",green:"#34d399",red:"#f87171",accent:"#818cf8",today:"#3b3f54",shadow:"0 2px 8px rgba(0,0,0,0.4)",shadowSm:"0 1px 3px rgba(0,0,0,0.3)"},
+carbon:{name:"Carbon",bg:"#111111",card:"#1c1c1c",cell:"#202020",cellActive:"#282828",border:"#333333",text:"#ffffff",dim:"#8a8a8a",green:"#4ade80",red:"#ef4444",accent:"#a3a3a3",today:"#303030",shadow:"0 2px 8px rgba(0,0,0,0.5)",shadowSm:"0 1px 3px rgba(0,0,0,0.4)"},
+ocean:{name:"Ocean",bg:"#0c1926",card:"#132338",cell:"#162844",cellActive:"#1c3358",border:"#1e3a5f",text:"#ffffff",dim:"#7a9cc0",green:"#34d399",red:"#fb7185",accent:"#38bdf8",today:"#1e3a5f",shadow:"0 2px 8px rgba(0,0,0,0.35)",shadowSm:"0 1px 3px rgba(0,0,0,0.25)"},
+ember:{name:"Ember",bg:"#1a0e0e",card:"#2a1515",cell:"#301a1a",cellActive:"#3d2020",border:"#4a2828",text:"#ffffff",dim:"#b08070",green:"#fbbf24",red:"#ef4444",accent:"#f97316",today:"#442222",shadow:"0 2px 8px rgba(0,0,0,0.4)",shadowSm:"0 1px 3px rgba(0,0,0,0.3)"},
+forest:{name:"Forest",bg:"#0c1a10",card:"#142818",cell:"#18301c",cellActive:"#1e3c22",border:"#264a2c",text:"#ffffff",dim:"#7aaa7e",green:"#4ade80",red:"#f87171",accent:"#22c55e",today:"#224428",shadow:"0 2px 8px rgba(0,0,0,0.35)",shadowSm:"0 1px 3px rgba(0,0,0,0.25)"},
+royal:{name:"Royal",bg:"#12081e",card:"#1e1030",cell:"#24143a",cellActive:"#2e1a4a",border:"#3a2260",text:"#ffffff",dim:"#9a80c0",green:"#a78bfa",red:"#f87171",accent:"#c084fc",today:"#342050",shadow:"0 2px 8px rgba(0,0,0,0.4)",shadowSm:"0 1px 3px rgba(0,0,0,0.3)"},
+snow:{name:"Snow",bg:"#f4f5f7",card:"#ffffff",cell:"#f0f1f4",cellActive:"#e6e8ee",border:"#d8dbe2",text:"#111318",dim:"#6b7084",green:"#059669",red:"#dc2626",accent:"#6366f1",today:"#e0e2e8",shadow:"0 2px 8px rgba(0,0,0,0.06)",shadowSm:"0 1px 3px rgba(0,0,0,0.04)",light:true},
+cream:{name:"Cream",bg:"#f5f0e8",card:"#fffdf8",cell:"#f2ede4",cellActive:"#e8e2d6",border:"#d8d0c2",text:"#1a1714",dim:"#7a7060",green:"#059669",red:"#dc2626",accent:"#b45309",today:"#e0dace",shadow:"0 2px 8px rgba(0,0,0,0.06)",shadowSm:"0 1px 3px rgba(0,0,0,0.04)",light:true},
+slate:{name:"Slate",bg:"#1e2028",card:"#282a34",cell:"#2e3040",cellActive:"#363848",border:"#3e4050",text:"#ffffff",dim:"#8a8ea4",green:"#2dd4bf",red:"#fb7185",accent:"#f472b6",today:"#3a3c4e",shadow:"0 2px 8px rgba(0,0,0,0.35)",shadowSm:"0 1px 3px rgba(0,0,0,0.25)"},
+gold:{name:"Gold",bg:"#0e0c08",card:"#1c1a10",cell:"#222016",cellActive:"#2e2a1a",border:"#3a3520",text:"#ffffff",dim:"#a8a080",green:"#eab308",red:"#ef4444",accent:"#d4a520",today:"#33301c",shadow:"0 2px 8px rgba(0,0,0,0.45)",shadowSm:"0 1px 3px rgba(0,0,0,0.35)"},
+};
+const MO=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const WD=["S","M","T","W","T","F","S"];
+function ld(k,d){try{const v=localStorage.getItem('pnl_'+k);return v?JSON.parse(v):d;}catch(e){return d;}}
+function sv(k,v){try{localStorage.setItem('pnl_'+k,JSON.stringify(v));}catch(e){}}
+let S={month:new Date().getMonth(),year:new Date().getFullYear(),accounts:ld('accounts',[{id:1,name:"Main Account"}]),activeAcct:ld('activeAcct',1),entries:ld('entries',{}),themeId:ld('themeId','midnight'),editing:null,input:'',showThemes:false,showAccts:false,addingAcct:false,newAcctName:'',editingAcctId:null,editAcctName:'',nextId:ld('nextId',2)};
+function ps(){sv('accounts',S.accounts);sv('activeAcct',S.activeAcct);sv('entries',S.entries);sv('themeId',S.themeId);sv('nextId',S.nextId);}
+function fm(n){if(n===0)return"$0";const a=Math.abs(n),s=a>=10000?`$${(a/1000).toFixed(0)}k`:a>=1000?`$${(a/1000).toFixed(1)}k`:`$${a.toFixed(0)}`;return n<0?`-${s}`:`+${s}`;}
+function ff(n){if(n===0)return"$0.00";const s=`$${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;return n<0?`-${s}`:`+${s}`;}
+function ky(d){return`${S.activeAcct}-${S.year}-${S.month}-${d}`;}
+function isTd(d){const n=new Date();return d===n.getDate()&&S.month===n.getMonth()&&S.year===n.getFullYear();}
+function isWe(d){return[0,6].includes(new Date(S.year,S.month,d).getDay());}
+function gCD(){const f=new Date(S.year,S.month,1),l=new Date(S.year,S.month+1,0),p=f.getDay(),d=[];for(let i=0;i<p;i++)d.push(null);for(let i=1;i<=l.getDate();i++)d.push(i);return d;}
+function gSt(){let t=0,d=0,w=0,lo=0;for(let i=1;i<=31;i++){const v=S.entries[ky(i)];if(v!==undefined){t+=v;d++;if(v>0)w++;if(v<0)lo++;}}return{total:t,days:d,wins:w,losses:lo,rate:d>0?Math.round(w/d*100):0};}
+function gWT(cd){const wk={};cd.forEach((d,i)=>{if(!d)return;const w=Math.floor(i/7);if(!wk[w])wk[w]=0;const v=S.entries[ky(d)];if(v!==undefined)wk[w]+=v;});return wk;}
+function gSI(cd){const s={};cd.forEach((d,i)=>{if(!d)return;const wi=Math.floor(i/7);if(new Date(S.year,S.month,d).getDay()===6)s[wi]=i;});const lr=Math.floor((cd.length-1)/7);if(s[lr]===undefined)for(let i=cd.length-1;i>=lr*7;i--){if(cd[i]!==null){s[lr]=i;break;}}return s;}
+function el(tag,at,...ch){const e=document.createElement(tag);if(at)Object.entries(at).forEach(([k,v])=>{if(k==='style'&&typeof v==='object')Object.assign(e.style,v);else if(k.startsWith('on'))e.addEventListener(k.slice(2).toLowerCase(),v);else e.setAttribute(k,v);});ch.flat().forEach(c=>{if(c==null)return;if(typeof c==='string'||typeof c==='number')e.appendChild(document.createTextNode(c));else e.appendChild(c);});return e;}
+
+function render(){
+const t=TH[S.themeId],acct=S.accounts.find(a=>a.id===S.activeAcct)||S.accounts[0],cd=gCD(),st=gSt(),wt=gWT(cd),si=gSI(cd);
+const app=document.getElementById('app');app.innerHTML='';
+Object.assign(app.style,{background:t.bg,color:t.text,padding:'0 16px 30px',minHeight:'100vh'});
+document.querySelector('meta[name="theme-color"]').content=t.bg;
+
+// Top bar
+app.appendChild(el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:'14px'}},
+  el('button',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'6px 12px',fontSize:'11px',color:t.text,cursor:'pointer',fontWeight:'600',boxShadow:t.shadowSm,display:'flex',alignItems:'center',gap:'5px'},onClick:()=>{S.showAccts=!S.showAccts;S.showThemes=false;render();}},el('span',{style:{fontSize:'10px',color:t.dim}},'▾'),' Accounts'),
+  el('button',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'6px 12px',fontSize:'11px',color:t.text,cursor:'pointer',fontWeight:'600',boxShadow:t.shadowSm},onClick:()=>{S.showThemes=!S.showThemes;S.showAccts=false;render();}},'Theme')
+));
+
+// Account panel
+if(S.showAccts){
+  const p=el('div',{style:{marginTop:'8px',background:t.card,border:`1px solid ${t.border}`,borderRadius:'14px',padding:'12px',boxShadow:t.shadow,animation:'fadeIn 0.12s ease'}});
+  p.appendChild(el('div',{style:{fontSize:'10px',color:t.dim,fontWeight:'700',letterSpacing:'1.5px',marginBottom:'8px',textTransform:'uppercase'}},'Accounts'));
+  const ls=el('div',{style:{display:'flex',flexDirection:'column',gap:'4px'}});
+  S.accounts.forEach(a=>{
+    const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:a.id===S.activeAcct?t.cellActive:t.cell,border:`1px solid ${a.id===S.activeAcct?t.accent:t.border}`,borderRadius:'10px',padding:'8px 10px',cursor:'pointer',boxShadow:t.shadowSm},onClick:()=>{if(S.editingAcctId!==a.id){S.activeAcct=a.id;S.showAccts=false;ps();render();}}});
+    const lf=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',flex:'1',minWidth:'0'}});
+    lf.appendChild(el('div',{style:{width:'8px',height:'8px',borderRadius:'50%',background:a.id===S.activeAcct?t.accent:t.border,flexShrink:'0'}}));
+    if(S.editingAcctId===a.id){const inp=el('input',{type:'text',style:{background:t.bg,border:`1px solid ${t.accent}`,borderRadius:'6px',padding:'3px 6px',fontSize:'13px',color:t.text,fontWeight:'600',outline:'none',width:'100%',fontFamily:'inherit'}});inp.value=S.editAcctName;inp.addEventListener('input',e=>{S.editAcctName=e.target.value;});inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nm=S.editAcctName.trim();if(nm)S.accounts=S.accounts.map(x=>x.id===a.id?{...x,name:nm}:x);S.editingAcctId=null;ps();render();}if(e.key==='Escape'){S.editingAcctId=null;render();}});inp.addEventListener('blur',()=>{const nm=S.editAcctName.trim();if(nm)S.accounts=S.accounts.map(x=>x.id===a.id?{...x,name:nm}:x);S.editingAcctId=null;ps();render();});inp.addEventListener('click',e=>e.stopPropagation());lf.appendChild(inp);setTimeout(()=>inp.focus(),10);}
+    else lf.appendChild(el('span',{style:{fontSize:'13px',fontWeight:a.id===S.activeAcct?'700':'500',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.name));
+    row.appendChild(lf);
+    const bt=el('div',{style:{display:'flex',gap:'4px',flexShrink:'0',marginLeft:'6px'}});
+    bt.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'6px',width:'26px',height:'26px',fontSize:'11px',color:t.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:t.shadowSm},onClick:e=>{e.stopPropagation();S.editingAcctId=a.id;S.editAcctName=a.name;render();}},'✎'));
+    if(S.accounts.length>1)bt.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'6px',width:'26px',height:'26px',fontSize:'13px',color:t.red,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'700',boxShadow:t.shadowSm},onClick:e=>{e.stopPropagation();S.accounts=S.accounts.filter(x=>x.id!==a.id);if(S.activeAcct===a.id)S.activeAcct=S.accounts[0].id;const ne={};Object.entries(S.entries).forEach(([k,v])=>{if(!k.startsWith(a.id+'-'))ne[k]=v;});S.entries=ne;ps();render();}},'×'));
+    row.appendChild(bt);ls.appendChild(row);
+  });
+  p.appendChild(ls);
+  if(S.addingAcct){const ar=el('div',{style:{display:'flex',gap:'6px',marginTop:'8px'}});const ai=el('input',{type:'text',placeholder:'Account name',style:{flex:'1',background:t.cell,border:`1px solid ${t.border}`,borderRadius:'8px',padding:'8px 10px',fontSize:'12px',color:t.text,fontFamily:'inherit',outline:'none'}});ai.value=S.newAcctName;ai.addEventListener('input',e=>{S.newAcctName=e.target.value;});ai.addEventListener('keydown',e=>{if(e.key==='Enter'){const nm=S.newAcctName.trim();if(nm){const id=S.nextId++;S.accounts.push({id,name:nm});S.activeAcct=id;S.newAcctName='';S.addingAcct=false;S.showAccts=false;ps();render();}}if(e.key==='Escape'){S.addingAcct=false;S.newAcctName='';render();}});ar.appendChild(ai);ar.appendChild(el('button',{style:{background:t.accent,border:'none',borderRadius:'8px',padding:'8px 14px',fontSize:'12px',fontWeight:'700',cursor:'pointer',color:t.light?'#fff':'#000'},onClick:()=>{const nm=S.newAcctName.trim();if(nm){const id=S.nextId++;S.accounts.push({id,name:nm});S.activeAcct=id;S.newAcctName='';S.addingAcct=false;S.showAccts=false;ps();render();}}},'Add'));ar.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'8px',padding:'8px 10px',fontSize:'12px',color:t.dim,cursor:'pointer'},onClick:()=>{S.addingAcct=false;S.newAcctName='';render();}},'×'));p.appendChild(ar);setTimeout(()=>ai.focus(),10);}
+  else p.appendChild(el('button',{style:{marginTop:'8px',width:'100%',background:t.cell,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'9px',fontSize:'12px',color:t.accent,cursor:'pointer',fontWeight:'700',boxShadow:t.shadowSm},onClick:()=>{S.addingAcct=true;render();}},'+ Add Account'));
+  app.appendChild(p);
+}
+
+// Theme picker
+if(S.showThemes){const tp=el('div',{style:{marginTop:'8px',background:t.card,border:`1px solid ${t.border}`,borderRadius:'14px',padding:'12px',boxShadow:t.shadow,animation:'fadeIn 0.12s ease'}});const w=el('div',{style:{display:'flex',flexWrap:'wrap',gap:'6px'}});Object.entries(TH).forEach(([id,th])=>{w.appendChild(el('button',{style:{background:id===S.themeId?t.accent:th.card,color:id===S.themeId?(t.light?'#fff':'#000'):th.text,border:`1px solid ${id===S.themeId?t.accent:th.border}`,borderRadius:'10px',padding:'6px 12px',fontSize:'11px',cursor:'pointer',fontWeight:id===S.themeId?'700':'500',boxShadow:t.shadowSm},onClick:()=>{S.themeId=id;S.showThemes=false;ps();render();}},th.name));});tp.appendChild(w);app.appendChild(tp);}
+
+// Month nav
+app.appendChild(el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',margin:'14px 0 10px'}},
+  el('button',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'10px',width:'34px',height:'34px',fontSize:'18px',color:t.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:t.shadowSm},onClick:()=>{if(S.month===0){S.month=11;S.year--;}else S.month--;render();}},'‹'),
+  el('div',{style:{textAlign:'center'}},el('div',{style:{fontSize:'18px',fontWeight:'800'}},MO[S.month]),el('div',{style:{fontSize:'11px',color:t.dim,fontWeight:'500',marginTop:'1px'}},''+S.year)),
+  el('button',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'10px',width:'34px',height:'34px',fontSize:'18px',color:t.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:t.shadowSm},onClick:()=>{if(S.month===11){S.month=0;S.year++;}else S.month++;render();}},'›')
+));
+
+// Summary
+const sm=el('div',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'16px',padding:'14px 16px',marginBottom:'12px',boxShadow:t.shadow}});
+sm.appendChild(el('div',{style:{fontSize:'13px',color:t.text,fontWeight:'800',marginBottom:'10px'}},acct.name));
+const sr=el('div',{style:{display:'flex',alignItems:'flex-end',justifyContent:'space-between'}});
+sr.appendChild(el('div',{},el('div',{style:{fontSize:'9px',color:t.dim,fontWeight:'600',letterSpacing:'1px',marginBottom:'4px'}},'MONTHLY P&L'),el('div',{style:{fontSize:'30px',fontWeight:'900',color:st.total>0?t.green:st.total<0?t.red:t.text}},ff(st.total))));
+const rt=el('div',{style:{textAlign:'right',paddingBottom:'2px'}});
+const stR=el('div',{style:{display:'flex',gap:'10px',justifyContent:'flex-end',marginBottom:'4px'}});
+[['W',st.wins,t.green],['L',st.losses,t.red],['RATE',st.rate+'%',t.text]].forEach(([l,v,c])=>{stR.appendChild(el('div',{},el('div',{style:{fontSize:'8px',color:t.dim,fontWeight:'600',letterSpacing:'1px'}},l),el('div',{style:{fontSize:'16px',fontWeight:'800',color:c}},String(v))));});
+rt.appendChild(stR);rt.appendChild(el('div',{style:{fontSize:'9px',color:t.dim}},st.days+' day'+(st.days!==1?'s':'')+' traded'));
+sr.appendChild(rt);sm.appendChild(sr);app.appendChild(sm);
+
+// Calendar
+const cal=el('div',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'16px',padding:'10px',boxShadow:t.shadow}});
+const hd=el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'4px',marginBottom:'4px'}});
+WD.forEach(d=>hd.appendChild(el('div',{style:{textAlign:'center',fontSize:'10px',color:t.dim,fontWeight:'700',padding:'2px 0'}},d)));
+cal.appendChild(hd);
+
+const gr=el('div',{style:{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:'4px'}});
+cd.forEach((d,i)=>{
+  if(d===null){gr.appendChild(el('div',{}));return;}
+  const val=S.entries[ky(d)],has=val!==undefined,td=isTd(d),we=isWe(d);
+  const wi=Math.floor(i/7),isSat=si[wi]===i,wkT=wt[wi],hasWT=wkT!==undefined&&wkT!==0;
+
+  if(isSat&&hasWT){
+    const c=el('div',{style:{aspectRatio:'1',borderRadius:'9px',background:t.cellActive,border:`2px solid ${wkT>0?t.green:t.red}`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',boxShadow:`0 2px 10px ${wkT>0?t.green:t.red}22, ${t.shadowSm}`},onClick:()=>{S.editing=d;S.input=has?String(val):'';S.showThemes=false;S.showAccts=false;render();}});
+    if(has)c.appendChild(el('div',{style:{fontSize:'8px',color:val>0?t.green:val<0?t.red:t.dim,fontWeight:'700',marginBottom:'1px'}},d+': '+fm(val)));
+    else c.appendChild(el('div',{style:{fontSize:'7px',color:t.dim,marginBottom:'1px'}},''+d));
+    c.appendChild(el('div',{style:{fontSize:'8px',color:t.dim,fontWeight:'700',letterSpacing:'0.8px',lineHeight:'1'}},'WK'));
+    c.appendChild(el('div',{style:{fontSize:'15px',fontWeight:'900',color:wkT>0?t.green:t.red,lineHeight:'1.1'}},fm(wkT)));
+    gr.appendChild(el('div',{},c));return;
+  }
+
+  let bg=t.cell;if(td)bg=t.today;else if(has)bg=t.cellActive;
+  const c=el('div',{style:{aspectRatio:'1',borderRadius:'9px',background:bg,border:td?`2px solid ${t.accent}`:`1px solid ${has?t.border:'transparent'}`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer',boxShadow:has?t.shadowSm:'none',opacity:we&&!has?'0.4':'1'},onClick:()=>{S.editing=d;S.input=has?String(val):'';S.showThemes=false;S.showAccts=false;render();}});
+  c.appendChild(el('div',{style:{fontSize:'8px',fontWeight:td?'800':'600',color:td?t.accent:t.dim,marginBottom:'1px'}},''+d));
+  if(has)c.appendChild(el('div',{style:{fontSize:'13px',fontWeight:'800',color:val>0?t.green:val<0?t.red:t.dim,letterSpacing:'-0.3px'}},fm(val)));
+  else c.appendChild(el('div',{style:{width:'3px',height:'3px',borderRadius:'50%',background:t.border}}));
+  gr.appendChild(el('div',{},c));
+});
+cal.appendChild(gr);app.appendChild(cal);
+
+// Modal
+if(S.editing!==null){
+  const ov=el('div',{style:{position:'fixed',inset:'0',background:t.light?'rgba(0,0,0,0.25)':'rgba(0,0,0,0.55)',display:'flex',alignItems:'flex-end',justifyContent:'center',zIndex:'999',animation:'fadeIn 0.1s ease'},onClick:e=>{if(e.target===e.currentTarget){S.editing=null;S.input='';render();}}});
+  const mo=el('div',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'20px 20px 0 0',padding:'20px 18px 32px',width:'100%',maxWidth:'430px',boxShadow:'0 -4px 20px rgba(0,0,0,0.25)',animation:'slideUp 0.18s ease'}});
+  const mt=el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'14px'}});
+  mt.appendChild(el('div',{},el('div',{style:{fontSize:'16px',fontWeight:'800',color:t.text}},MO[S.month]+' '+S.editing+', '+S.year),el('div',{style:{fontSize:'11px',color:t.dim,marginTop:'2px',fontWeight:'500'}},acct.name)));
+  if(S.entries[ky(S.editing)]!==undefined)mt.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'6px 12px',color:t.red,fontSize:'11px',fontWeight:'700',cursor:'pointer',boxShadow:t.shadowSm},onClick:()=>{delete S.entries[ky(S.editing)];S.editing=null;S.input='';ps();render();}},'Clear'));
+  mo.appendChild(mt);
+  const iw=el('div',{style:{position:'relative',marginBottom:'12px'}});
+  iw.appendChild(el('span',{style:{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',fontSize:'20px',color:t.dim,fontWeight:'800'}},'$'));
+  const inp=el('input',{type:'text',inputmode:'decimal',placeholder:'0.00',style:{width:'100%',background:t.cell,border:`2px solid ${t.border}`,borderRadius:'12px',padding:'14px 14px 14px 38px',fontSize:'24px',fontWeight:'800',color:t.text,fontFamily:'inherit',outline:'none',boxShadow:t.shadowSm}});
+  inp.value=S.input;inp.addEventListener('input',e=>{S.input=e.target.value;});
+  function doSave(){const val=parseFloat(S.input.replace(/[^0-9.\-]/g,''));if(!isNaN(val))S.entries[ky(S.editing)]=val;else if(S.input.trim()==='')delete S.entries[ky(S.editing)];S.editing=null;S.input='';ps();render();}
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')doSave();});
+  iw.appendChild(inp);iw.appendChild(el('div',{style:{fontSize:'10px',color:t.dim,marginTop:'5px',paddingLeft:'2px',fontWeight:'500'}},'Negative for losses (e.g. -250)'));
+  mo.appendChild(iw);setTimeout(()=>inp.focus(),20);
+  const qb=el('div',{style:{display:'flex',gap:'5px',flexWrap:'wrap',marginBottom:'14px'}});
+  [100,250,500,1000,-100,-250,-500,-1000].forEach(v=>{qb.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'8px 11px',fontSize:'12px',fontWeight:'700',color:v>0?t.green:t.red,cursor:'pointer',boxShadow:t.shadowSm},onClick:()=>{S.input=String(v);inp.value=String(v);}},(v>0?'+':'')+v));});
+  mo.appendChild(qb);
+  mo.appendChild(el('button',{style:{width:'100%',background:t.accent,border:'none',borderRadius:'12px',padding:'14px',fontSize:'15px',fontWeight:'800',cursor:'pointer',color:t.light?'#fff':'#000',boxShadow:`0 4px 12px ${t.accent}44`},onClick:doSave},'Save'));
+  ov.appendChild(mo);app.appendChild(ov);
+}
+}
+render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+</script>
+</body>
+</html>
