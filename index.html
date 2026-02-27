@@ -59,35 +59,86 @@ document.querySelector('meta[name="theme-color"]').content=t.bg;
 
 // Top bar
 app.appendChild(el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:'14px'}},
-  el('button',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'6px 12px',fontSize:'11px',color:t.text,cursor:'pointer',fontWeight:'600',boxShadow:t.shadowSm,display:'flex',alignItems:'center',gap:'5px'},onClick:()=>{S.showAccts=!S.showAccts;S.showThemes=false;render();}},el('span',{style:{fontSize:'10px',color:t.dim}},'▾'),' Accounts'),
+  el('button',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'6px 12px',fontSize:'11px',color:t.text,cursor:'pointer',fontWeight:'600',boxShadow:t.shadowSm,display:'flex',alignItems:'center',gap:'5px'},onClick:()=>{S.showAccts=!S.showAccts;S.showThemes=false;S.addingAcct=false;S.editingAcctId=null;render();}},el('span',{style:{fontSize:'10px',color:t.dim}},'▾'),' Accounts'),
   el('button',{style:{background:t.card,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'6px 12px',fontSize:'11px',color:t.text,cursor:'pointer',fontWeight:'600',boxShadow:t.shadowSm},onClick:()=>{S.showThemes=!S.showThemes;S.showAccts=false;render();}},'Theme')
 ));
 
 // Account panel
 if(S.showAccts){
   const p=el('div',{style:{marginTop:'8px',background:t.card,border:`1px solid ${t.border}`,borderRadius:'14px',padding:'12px',boxShadow:t.shadow,animation:'fadeIn 0.12s ease'}});
-  p.appendChild(el('div',{style:{fontSize:'10px',color:t.dim,fontWeight:'700',letterSpacing:'1.5px',marginBottom:'8px',textTransform:'uppercase'}},'Accounts'));
+
+  // Header with close button
+  const hdr=el('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'8px'}});
+  hdr.appendChild(el('div',{style:{fontSize:'10px',color:t.dim,fontWeight:'700',letterSpacing:'1.5px',textTransform:'uppercase'}},'Accounts'));
+  hdr.appendChild(el('button',{style:{background:'none',border:'none',fontSize:'16px',color:t.dim,cursor:'pointer',padding:'0 2px',lineHeight:'1'},onClick:()=>{S.showAccts=false;S.addingAcct=false;S.editingAcctId=null;render();}},'×'));
+  p.appendChild(hdr);
+
   const ls=el('div',{style:{display:'flex',flexDirection:'column',gap:'4px'}});
   S.accounts.forEach(a=>{
-    const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:a.id===S.activeAcct?t.cellActive:t.cell,border:`1px solid ${a.id===S.activeAcct?t.accent:t.border}`,borderRadius:'10px',padding:'8px 10px',cursor:'pointer',boxShadow:t.shadowSm},onClick:()=>{if(S.editingAcctId!==a.id){S.activeAcct=a.id;S.showAccts=false;ps();render();}}});
-    const lf=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',flex:'1',minWidth:'0'}});
+    const row=el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:a.id===S.activeAcct?t.cellActive:t.cell,border:`1px solid ${a.id===S.activeAcct?t.accent:t.border}`,borderRadius:'10px',padding:'8px 10px',boxShadow:t.shadowSm}});
+
+    // Left side — name area (click to select, panel stays open)
+    const lf=el('div',{style:{display:'flex',alignItems:'center',gap:'8px',flex:'1',minWidth:'0',cursor:'pointer'},onClick:()=>{if(S.editingAcctId!==a.id){S.activeAcct=a.id;ps();render();}}});
     lf.appendChild(el('div',{style:{width:'8px',height:'8px',borderRadius:'50%',background:a.id===S.activeAcct?t.accent:t.border,flexShrink:'0'}}));
-    if(S.editingAcctId===a.id){const inp=el('input',{type:'text',style:{background:t.bg,border:`1px solid ${t.accent}`,borderRadius:'6px',padding:'3px 6px',fontSize:'13px',color:t.text,fontWeight:'600',outline:'none',width:'100%',fontFamily:'inherit'}});inp.value=S.editAcctName;inp.addEventListener('input',e=>{S.editAcctName=e.target.value;});inp.addEventListener('keydown',e=>{if(e.key==='Enter'){const nm=S.editAcctName.trim();if(nm)S.accounts=S.accounts.map(x=>x.id===a.id?{...x,name:nm}:x);S.editingAcctId=null;ps();render();}if(e.key==='Escape'){S.editingAcctId=null;render();}});inp.addEventListener('blur',()=>{const nm=S.editAcctName.trim();if(nm)S.accounts=S.accounts.map(x=>x.id===a.id?{...x,name:nm}:x);S.editingAcctId=null;ps();render();});inp.addEventListener('click',e=>e.stopPropagation());lf.appendChild(inp);setTimeout(()=>inp.focus(),10);}
-    else lf.appendChild(el('span',{style:{fontSize:'13px',fontWeight:a.id===S.activeAcct?'700':'500',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.name));
+
+    if(S.editingAcctId===a.id){
+      const inp=el('input',{type:'text',style:{background:t.bg,border:`1px solid ${t.accent}`,borderRadius:'6px',padding:'4px 8px',fontSize:'13px',color:t.text,fontWeight:'600',outline:'none',width:'100%',fontFamily:'inherit'}});
+      inp.value=S.editAcctName;
+      inp.addEventListener('input',e=>{S.editAcctName=e.target.value;});
+      inp.addEventListener('keydown',e=>{
+        if(e.key==='Enter'){const nm=S.editAcctName.trim();if(nm)S.accounts=S.accounts.map(x=>x.id===a.id?{...x,name:nm}:x);S.editingAcctId=null;ps();render();}
+        if(e.key==='Escape'){S.editingAcctId=null;render();}
+      });
+      inp.addEventListener('blur',()=>{const nm=S.editAcctName.trim();if(nm)S.accounts=S.accounts.map(x=>x.id===a.id?{...x,name:nm}:x);S.editingAcctId=null;ps();render();});
+      inp.addEventListener('click',e=>e.stopPropagation());
+      lf.appendChild(inp);
+      setTimeout(()=>inp.focus(),10);
+    } else {
+      lf.appendChild(el('span',{style:{fontSize:'13px',fontWeight:a.id===S.activeAcct?'700':'500',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},a.name));
+    }
     row.appendChild(lf);
+
+    // Right side — edit & delete buttons
     const bt=el('div',{style:{display:'flex',gap:'4px',flexShrink:'0',marginLeft:'6px'}});
-    bt.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'6px',width:'26px',height:'26px',fontSize:'11px',color:t.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:t.shadowSm},onClick:e=>{e.stopPropagation();S.editingAcctId=a.id;S.editAcctName=a.name;render();}},'✎'));
-    if(S.accounts.length>1)bt.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'6px',width:'26px',height:'26px',fontSize:'13px',color:t.red,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'700',boxShadow:t.shadowSm},onClick:e=>{e.stopPropagation();S.accounts=S.accounts.filter(x=>x.id!==a.id);if(S.activeAcct===a.id)S.activeAcct=S.accounts[0].id;const ne={};Object.entries(S.entries).forEach(([k,v])=>{if(!k.startsWith(a.id+'-'))ne[k]=v;});S.entries=ne;ps();render();}},'×'));
-    row.appendChild(bt);ls.appendChild(row);
+    bt.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'6px',width:'28px',height:'28px',fontSize:'11px',color:t.dim,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:t.shadowSm},onClick:e=>{e.stopPropagation();S.editingAcctId=a.id;S.editAcctName=a.name;render();}},'✎'));
+    if(S.accounts.length>1){
+      bt.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'6px',width:'28px',height:'28px',fontSize:'13px',color:t.red,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:'700',boxShadow:t.shadowSm},onClick:e=>{e.stopPropagation();S.accounts=S.accounts.filter(x=>x.id!==a.id);if(S.activeAcct===a.id)S.activeAcct=S.accounts[0].id;const ne={};Object.entries(S.entries).forEach(([k,v])=>{if(!k.startsWith(a.id+'-'))ne[k]=v;});S.entries=ne;ps();render();}},'×'));
+    }
+    row.appendChild(bt);
+    ls.appendChild(row);
   });
   p.appendChild(ls);
-  if(S.addingAcct){const ar=el('div',{style:{display:'flex',gap:'6px',marginTop:'8px'}});const ai=el('input',{type:'text',placeholder:'Account name',style:{flex:'1',background:t.cell,border:`1px solid ${t.border}`,borderRadius:'8px',padding:'8px 10px',fontSize:'12px',color:t.text,fontFamily:'inherit',outline:'none'}});ai.value=S.newAcctName;ai.addEventListener('input',e=>{S.newAcctName=e.target.value;});ai.addEventListener('keydown',e=>{if(e.key==='Enter'){const nm=S.newAcctName.trim();if(nm){const id=S.nextId++;S.accounts.push({id,name:nm});S.activeAcct=id;S.newAcctName='';S.addingAcct=false;S.showAccts=false;ps();render();}}if(e.key==='Escape'){S.addingAcct=false;S.newAcctName='';render();}});ar.appendChild(ai);ar.appendChild(el('button',{style:{background:t.accent,border:'none',borderRadius:'8px',padding:'8px 14px',fontSize:'12px',fontWeight:'700',cursor:'pointer',color:t.light?'#fff':'#000'},onClick:()=>{const nm=S.newAcctName.trim();if(nm){const id=S.nextId++;S.accounts.push({id,name:nm});S.activeAcct=id;S.newAcctName='';S.addingAcct=false;S.showAccts=false;ps();render();}}},'Add'));ar.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'8px',padding:'8px 10px',fontSize:'12px',color:t.dim,cursor:'pointer'},onClick:()=>{S.addingAcct=false;S.newAcctName='';render();}},'×'));p.appendChild(ar);setTimeout(()=>ai.focus(),10);}
-  else p.appendChild(el('button',{style:{marginTop:'8px',width:'100%',background:t.cell,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'9px',fontSize:'12px',color:t.accent,cursor:'pointer',fontWeight:'700',boxShadow:t.shadowSm},onClick:()=>{S.addingAcct=true;render();}},'+ Add Account'));
+
+  // Add account
+  if(S.addingAcct){
+    const ar=el('div',{style:{display:'flex',gap:'6px',marginTop:'8px'}});
+    const ai=el('input',{type:'text',placeholder:'Account name',style:{flex:'1',background:t.cell,border:`1px solid ${t.border}`,borderRadius:'8px',padding:'8px 10px',fontSize:'12px',color:t.text,fontFamily:'inherit',outline:'none'}});
+    ai.value=S.newAcctName;
+    ai.addEventListener('input',e=>{S.newAcctName=e.target.value;});
+    ai.addEventListener('keydown',e=>{
+      if(e.key==='Enter'){const nm=S.newAcctName.trim();if(nm){const id=S.nextId++;S.accounts.push({id,name:nm});S.activeAcct=id;S.newAcctName='';S.addingAcct=false;ps();render();}}
+      if(e.key==='Escape'){S.addingAcct=false;S.newAcctName='';render();}
+    });
+    ar.appendChild(ai);
+    ar.appendChild(el('button',{style:{background:t.accent,border:'none',borderRadius:'8px',padding:'8px 14px',fontSize:'12px',fontWeight:'700',cursor:'pointer',color:t.light?'#fff':'#000'},onClick:()=>{const nm=S.newAcctName.trim();if(nm){const id=S.nextId++;S.accounts.push({id,name:nm});S.activeAcct=id;S.newAcctName='';S.addingAcct=false;ps();render();}}},'Add'));
+    ar.appendChild(el('button',{style:{background:t.cell,border:`1px solid ${t.border}`,borderRadius:'8px',padding:'8px 10px',fontSize:'12px',color:t.dim,cursor:'pointer'},onClick:()=>{S.addingAcct=false;S.newAcctName='';render();}},'×'));
+    p.appendChild(ar);
+    setTimeout(()=>ai.focus(),10);
+  } else {
+    p.appendChild(el('button',{style:{marginTop:'8px',width:'100%',background:t.cell,border:`1px solid ${t.border}`,borderRadius:'10px',padding:'9px',fontSize:'12px',color:t.accent,cursor:'pointer',fontWeight:'700',boxShadow:t.shadowSm},onClick:()=>{S.addingAcct=true;render();}},'+ Add Account'));
+  }
   app.appendChild(p);
 }
 
 // Theme picker
-if(S.showThemes){const tp=el('div',{style:{marginTop:'8px',background:t.card,border:`1px solid ${t.border}`,borderRadius:'14px',padding:'12px',boxShadow:t.shadow,animation:'fadeIn 0.12s ease'}});const w=el('div',{style:{display:'flex',flexWrap:'wrap',gap:'6px'}});Object.entries(TH).forEach(([id,th])=>{w.appendChild(el('button',{style:{background:id===S.themeId?t.accent:th.card,color:id===S.themeId?(t.light?'#fff':'#000'):th.text,border:`1px solid ${id===S.themeId?t.accent:th.border}`,borderRadius:'10px',padding:'6px 12px',fontSize:'11px',cursor:'pointer',fontWeight:id===S.themeId?'700':'500',boxShadow:t.shadowSm},onClick:()=>{S.themeId=id;S.showThemes=false;ps();render();}},th.name));});tp.appendChild(w);app.appendChild(tp);}
+if(S.showThemes){
+  const tp=el('div',{style:{marginTop:'8px',background:t.card,border:`1px solid ${t.border}`,borderRadius:'14px',padding:'12px',boxShadow:t.shadow,animation:'fadeIn 0.12s ease'}});
+  const w=el('div',{style:{display:'flex',flexWrap:'wrap',gap:'6px'}});
+  Object.entries(TH).forEach(([id,th])=>{
+    w.appendChild(el('button',{style:{background:id===S.themeId?t.accent:th.card,color:id===S.themeId?(t.light?'#fff':'#000'):th.text,border:`1px solid ${id===S.themeId?t.accent:th.border}`,borderRadius:'10px',padding:'6px 12px',fontSize:'11px',cursor:'pointer',fontWeight:id===S.themeId?'700':'500',boxShadow:t.shadowSm},onClick:()=>{S.themeId=id;S.showThemes=false;ps();render();}},th.name));
+  });
+  tp.appendChild(w);app.appendChild(tp);
+}
 
 // Month nav
 app.appendChild(el('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',margin:'14px 0 10px'}},
